@@ -58,11 +58,14 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     text = event.message.text
-    if text == "@reset":
-        message = []
-
-    output = generate_response(text)
-    messages.append({"role": "assistant", "content": output})
+    global messages
+    if text == "@reset":  # by rich menu
+        messages = []
+        output = generate_response("ハロー")
+        messages.append({"role": "assistant", "content": output})
+    else:
+        output = generate_response(text)
+        messages.append({"role": "assistant", "content": output})
 
     message = TextSendMessage(text=output)
 
