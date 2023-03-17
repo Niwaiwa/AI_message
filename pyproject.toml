@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Niwaiwa <po2846@gmail.com>"]
 readme = "README.md"
-packages = [{include = "ai_message"}]
+packages = [{include = "app"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
