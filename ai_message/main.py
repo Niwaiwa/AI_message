@@ -15,7 +15,11 @@ from linebot.models import (
 
 from dotenv import load_dotenv
 from os import environ
+import os
+import openai
 
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 load_dotenv('.env')
 ACCESS_TOKEN = environ.get('ACCESS_TOKEN', '')
@@ -25,6 +29,8 @@ app = Flask(__name__)
 
 line_bot_api = LineBotApi(ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
+init_message = {"role": "system", "content": "You are a helpful assistant. Answer as concisely as possible with a little humor expression."}
+messages = []
 
 
 @app.route("/callback", methods=['POST'])
@@ -52,64 +58,28 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     text = event.message.text
-    if text.lower() == "pixiv":
-        p = Pixiv()
-        rank_list = p.get_rank_data()
-        bubble_item_list = []
-        for rank_item in rank_list['contents']:
-            bubble_container = get_pixiv_bubble_messages(rank_item)
-            bubble_item_list.append(bubble_container)
+    if text == "@reset":
+        message = []
 
-        messages = []
-        chunk_list = get_chunk_list(bubble_item_list)
-        for item_list in chunk_list:
-            message = FlexSendMessage(
-                alt_text='hello',
-                contents=CarouselContainer(
-                    contents=item_list
-                )
-            )
-            messages.append(message)
+    output = generate_response(text)
+    messages.append({"role": "assistant", "content": output})
 
-        line_bot_api.reply_message(
-            event.reply_token,
-            messages)
-    elif text.lower() == "nico":
-        p = Niconico()
-        rank_list = p.get_rank_data()
-        bubble_item_list = []
-        for rank_item in rank_list['contents']:
-            bubble_container = get_niconico_bubble_messages(rank_item)
-            bubble_item_list.append(bubble_container)
+    message = TextSendMessage(text=output)
 
-        messages = []
-        chunk_list = get_chunk_list(bubble_item_list)
-        for item_list in chunk_list:
-            message = FlexSendMessage(
-                alt_text='hello',
-                contents=CarouselContainer(
-                    contents=item_list
-                )
-            )
-            messages.append(message)
+    line_bot_api.reply_message(
+        event.reply_token,
+        message)
 
-        # if len(messages) > 5:
-        #     chunk_list = get_chunk_list(messages, 5)
-        #     for messages in chunk_list:
-        #         line_bot_api.reply_message(
-        #             event.reply_token,
-        #             messages)
-        #         break
-        # else:
-        line_bot_api.reply_message(
-            event.reply_token,
-            messages)
-    else:
-        message = TextSendMessage(text=text)
 
-        line_bot_api.reply_message(
-            event.reply_token,
-            message)
+def generate_response(prompt):
+    messages.append({"role": "user", "content":prompt})
+    completion=openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages = messages
+    )
+    
+    message=completion.choices[0].message.content
+    return message
 
 
 def get_chunk_list(data=[], chunk_size=12):
